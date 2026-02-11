@@ -1,0 +1,5 @@
+Jan Kowalski|1234|user
+Anna Nowak|5678|user
+Admin Admin|0000|admin
+Piotr Wiśniewski|1111|user
+Zmęczony Nauczyciel|2222|user
