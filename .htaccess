@@ -1,0 +1,18 @@
+# Zabezpieczenie plików konfiguracyjnych i systemowych
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+<FilesMatch "(composer\.json|composer\.lock|README\.md|DATABASE\.sql)">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Wyłączenie listowania katalogów
+Options -Indexes
+
+# Blokada dostępu do newralgicznych folderów (jeśli DocumentRoot jest ustawiony na ten folder)
+# Jeśli DocumentRoot to /public, to te reguły są nadmiarowe, ale nie szkodzą
+RewriteEngine On
+RewriteRule ^(config|includes|logs|vendor|scripts|tests)/ - [F,L]

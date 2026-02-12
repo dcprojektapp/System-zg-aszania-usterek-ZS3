@@ -39,6 +39,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $error = "Nieprawidłowy kod dostępu.";
         }
+    } elseif (isset($_POST['school_login'])) {
+        // --- KONFIGURACJA SIECI SZKOLNEJ ---
+        // Lista IP, które mają dostęp bezwarunkowy (np. stały publiczny IP szkoły)
+        $allowed_ips = ['31.41.80.186'];
+
+        // Opcjonalnie: Jeśli masz stały publiczny IP szkoły, dodaj go tutaj:
+        // $allowed_ips[] = '83.12.34.56';
+
+        $user_ip = $_SERVER['REMOTE_ADDR'];
+        $access_granted = false;
+
+        foreach ($allowed_ips as $allowed) {
+            // Sprawdź czy IP użytkownika zaczyna się od dozwolonego ciągu
+            if (strpos($user_ip, $allowed) === 0) {
+                $access_granted = true;
+                break;
+            }
+        }
+
+        // --- SPRAWDZANIE NAZWY KOMPUTERA (HOSTNAME) ---
+        // Próba pobrania nazwy domenowej komputera
+        $hostname = gethostbyaddr($user_ip);
+        if ($hostname === false) { 
+            $hostname = $user_ip; 
+        }
+
+        // Warunek: nazwa zawiera "k420" ORAZ "Pracownia" + cyfry 01-20
+        // Przykład pasujący: k420-Pracownia05.zs3.lukow.pl
+        // Regex: /k420.*Pracownia(0[1-9]|1[0-9]|20)/i
+        if (!$access_granted) {
+            if (preg_match('/k420.*Pracownia(0[1-9]|1[0-9]|20)/i', $hostname)) {
+                $access_granted = true;
+            }
+        }
+
+        if ($access_granted) {
+            if ($hostname === $user_ip) {
+                // Jeśli nie udało się rozwiązać nazwy, a dostęp przyznano po IP
+                $hostname = "Komputer Szkolny ($user_ip)";
+            }
+
+            // Logowanie automatyczne na konto Nauczyciel
+            $stmt = $pdo->prepare("SELECT id, name, role FROM users WHERE email = :email AND is_active = 1");
+            $stmt->execute([':email' => 'nauczyciel@zs3.lukow.pl']);
+            $user = $stmt->fetch();
+
+            if ($user) {
+                $_SESSION['user_id'] = $user['id'];
+                // Nadpisujemy nazwę użytkownika w sesji, żeby w zgłoszeniu było widać skąd kliknięto
+                $_SESSION['user_name'] = $hostname;
+                $_SESSION['user_role'] = $user['role'];
+                header("Location: index.php");
+                exit;
+            } else {
+                $error = "Konto 'nauczyciel@zs3.lukow.pl' nie istnieje w bazie. Utwórz je najpierw.";
+            }
+        } else {
+            $error = "Odmowa dostępu. Twój adres IP ($user_ip) nie znajduje się w zaufanej sieci szkolnej.";
+        }
     } elseif ($email && $password) {
         try {
             // Zmiana zapytania: szukamy po emailu, sprawdzamy password_hash
@@ -136,22 +195,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="position-relative my-4">
                     <hr class="text-muted opacity-25">
-                    <span class="position-absolute top-50 start-50 translate-middle px-3 bg-white text-muted small fw-bold">LUB</span>
+                    <span
+                        class="position-absolute top-50 start-50 translate-middle px-3 bg-white text-muted small fw-bold">LUB</span>
                 </div>
 
                 <form method="POST" action="login.php">
                     <div class="mb-3">
                         <label for="access_code" class="form-label fw-bold">Kod dostępu</label>
-                        <input type="password" class="form-control form-control-lg" id="access_code" name="access_code" placeholder="Wpisz kod nauczyciela">
+                        <input type="password" class="form-control form-control-lg" id="access_code" name="access_code"
+                            placeholder="Wpisz kod nauczyciela">
                     </div>
                     <div class="d-grid">
                         <button type="submit" class="btn btn-outline-primary btn-lg">Zaloguj kodem</button>
                     </div>
                 </form>
 
-                <div class="text-center mt-3 text-muted small">
-                    <p>Domyślny login: nauczyciel@zs3.lukow.pl<br>Hasło: nauczycielZS3</p>
+                <div class="position-relative my-4">
+                    <hr class="text-muted opacity-25">
+                    <span
+                        class="position-absolute top-50 start-50 translate-middle px-3 bg-white text-muted small fw-bold">SIEĆ
+                        SZKOLNA</span>
                 </div>
+
+                <form method="POST" action="login.php">
+                    <div class="d-grid gap-2">
+                        <button type="submit" name="school_login" value="1" class="btn btn-success btn-lg shadow-sm">
+                            <i class="bi bi-building"></i> 🏫 Wejście z sieci ZS3
+                        </button>
+                    </div>
+                </form>
+                <div class="text-center mt-3 text-muted small opacity-75">
+                    <i class="bi bi-broadcast"></i> Twój IP: <?php echo $_SERVER['REMOTE_ADDR']; ?>
+                </div>
+
+
             </div>
         </div>
     </div>
