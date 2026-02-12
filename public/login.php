@@ -20,7 +20,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $password = $_POST['password'] ?? '';
 
-    if ($email && $password) {
+    if (isset($_POST['access_code'])) {
+        $access_code = trim($_POST['access_code']);
+        if ($access_code === 'nauczycielZS3') {
+            $stmt = $pdo->prepare("SELECT id, name, role FROM users WHERE email = :email");
+            $stmt->execute([':email' => 'nauczyciel@zs3.lukow.pl']);
+            $user = $stmt->fetch();
+
+            if ($user) {
+                $_SESSION['user_id'] = $user['id'];
+                $_SESSION['user_name'] = $user['name'];
+                $_SESSION['user_role'] = $user['role'];
+                header("Location: index.php");
+                exit;
+            } else {
+                $error = "Konto nauczyciela nie zostało znalezione.";
+            }
+        } else {
+            $error = "Nieprawidłowy kod dostępu.";
+        }
+    } elseif ($email && $password) {
         try {
             // Zmiana zapytania: szukamy po emailu, sprawdzamy password_hash
             $stmt = $pdo->prepare("SELECT id, name, password_hash, role FROM users WHERE email = :email AND is_active = 1");
@@ -77,7 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         .login-card {
             width: 100%;
-            max-width: 420px;
+            max-width: 600px;
             padding: 2rem;
         }
     </style>
@@ -88,7 +107,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="container">
         <div class="card login-card mx-auto">
             <div class="card-body">
-                <div class="brand-logo">System Zgłaszania Usterek w ZS nr 3 im. W.S. Reymonta</div>
+                <div class="brand-logo">System zgłaszania usterek<br>w Zespół Szkół nr 3<br>im. Władysława Stanisława
+                    Reymonta</div>
                 <h5 class="text-center mb-4 text-muted">Zaloguj się</h5>
 
                 <?php if ($error): ?>
@@ -111,6 +131,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div class="d-grid">
                         <button type="submit" class="btn btn-primary btn-lg">Zaloguj się</button>
+                    </div>
+                </form>
+
+                <div class="position-relative my-4">
+                    <hr class="text-muted opacity-25">
+                    <span class="position-absolute top-50 start-50 translate-middle px-3 bg-white text-muted small fw-bold">LUB</span>
+                </div>
+
+                <form method="POST" action="login.php">
+                    <div class="mb-3">
+                        <label for="access_code" class="form-label fw-bold">Kod dostępu</label>
+                        <input type="password" class="form-control form-control-lg" id="access_code" name="access_code" placeholder="Wpisz kod nauczyciela">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-outline-primary btn-lg">Zaloguj kodem</button>
                     </div>
                 </form>
 

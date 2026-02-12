@@ -28,8 +28,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ticket_id'], $_POST['
     $status = $_POST['status'];
 
     try {
-        $stmt = $pdo->prepare("UPDATE tickets SET status = :status WHERE id = :id");
-        $stmt->execute([':status' => $status, ':id' => $ticket_id]);
+        $resolved_at = ($status === 'naprawione' || $status === 'rozwiazane') ? date('Y-m-d H:i:s') : null;
+        $stmt = $pdo->prepare("UPDATE tickets SET status = :status, resolved_at = :resolved_at WHERE id = :id");
+        $stmt->execute([':status' => $status, ':resolved_at' => $resolved_at, ':id' => $ticket_id]);
+
+        // Powiadomienie użytkownika o zmianie statusu
+        require_once __DIR__ . '/../../includes/Mailer.php';
+        try {
+            $userStmt = $pdo->prepare("SELECT u.email, t.issue_type, t.room_number FROM tickets t JOIN users u ON t.user_id = u.id WHERE t.id = :id");
+            $userStmt->execute([':id' => $ticket_id]);
+            $ticketInfo = $userStmt->fetch();
+
+            if ($ticketInfo && filter_var($ticketInfo['email'], FILTER_VALIDATE_EMAIL)) {
+                $status_pl = str_replace('_', ' ', $status);
+                $mail_subject = "Zmiana statusu zgłoszenia: {$ticketInfo['issue_type']}";
+                $mail_body = "
+                    <h3>Aktualizacja zgłoszenia</h3>
+                    <p>Twoje zgłoszenie dotyczące usterki <strong>{$ticketInfo['issue_type']}</strong> w sali <strong>{$ticketInfo['room_number']}</strong> zmieniło status na:</p>
+                    <h2 style='color: #4e73df;'>" . mb_strtoupper($status_pl) . "</h2>
+                    <p>Pozdrawiamy,<br>Zespół Administratorów</p>
+                ";
+                Mailer::send($ticketInfo['email'], $mail_subject, $mail_body);
+            }
+        } catch (Exception $e) {
+            // Ignoruj błędy wysyłki
+        }
+
         $success_msg = "Status zgłoszenia #" . $ticket_id . " został zaktualizowany.";
     } catch (PDOException $e) {
         $error_msg = "Błąd aktualizacji statusu: " . $e->getMessage();

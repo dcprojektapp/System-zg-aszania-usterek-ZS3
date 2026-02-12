@@ -16,7 +16,7 @@ Nowoczesna aplikacja internetowa do zarządzania zgłoszeniami awarii w szkole. 
 ## 🚀 Instalacja i Uruchomienie
 
 ### Wymagania
-- Serwer z obsługą PHP 8.0+ (np. XAMPP, Laragon).
+- Serwer z obsługą PHP 8.0++ (np. XAMPP, Laragon).
 - Baza danych MySQL/MariaDB.
 
 ### Krok po kroku

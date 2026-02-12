@@ -59,13 +59,22 @@ try {
         ':role' => $role
     ]);
 
-    // Dodatkowo Administrator dla testów (opcjonalnie, zakomentowane jeśli ma być TYLKO jeden)
-    // admin@zs3.lukow.pl / AdminZS3
-    $admin_pass = password_hash('AdminZS3', PASSWORD_DEFAULT);
-    $pdo->exec("INSERT INTO users (name, email, password_hash, role) VALUES ('Administrator', 'admin@zs3.lukow.pl', '$admin_pass', 'admin')");
+    // Konta Administratorów
+    $admins = [
+        ['name' => 'Dawid Chaber', 'email' => 'dchaber@zs3.lukow.pl', 'pass' => 'ZS3Lukow'],
+        ['name' => 'Wojciech Zielonka', 'email' => 'wzielonka@zs3.lukow.pl', 'pass' => 'ZS3Lukow']
+    ];
 
-    echo "Utworzono użytkownika: $email (hasło: $password)<br>";
-    echo "Utworzono administratora: admin@zs3.lukow.pl (hasło: AdminZS3)<br>";
+    foreach ($admins as $admin) {
+        $hash = password_hash($admin['pass'], PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("INSERT INTO users (name, email, password_hash, role) VALUES (:name, :email, :pass, 'admin')");
+        try {
+            $stmt->execute([':name' => $admin['name'], ':email' => $admin['email'], ':pass' => $hash]);
+            echo "Utworzono administratora: {$admin['name']} ({$admin['email']}) - Hasło: {$admin['pass']}<br>";
+        } catch (PDOException $e) {
+            echo "Nie udało się utworzyć konta {$admin['name']} (prawdopodobnie już istnieje).<br>";
+        }
+    }
 
 
     echo "<a href='index.php'>Przejdź do strony głównej</a>";

@@ -1,0 +1,20 @@
+
+# Config files
+config/db.php
+config/mail_config.php
+config/telegram_config.php
+
+# Logs
+logs/
+*.log
+
+# Vendor
+vendor/
+
+# Temporary
+scripts/
+.env
+
+# System
+thumbs.db
+.DS_Store

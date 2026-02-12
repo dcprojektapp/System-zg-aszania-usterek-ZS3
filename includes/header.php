@@ -33,15 +33,21 @@ if (session_status() === PHP_SESSION_NONE) {
     $path_prefix = $is_admin_page ? '../' : '';
     ?>
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="<?php echo $path_prefix; ?>index.php">System Zgłaszania Usterek w ZS nr 3 im.
-                W.S. Reymonta</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
+        <div class="container flex-column">
+            <!-- Row 1: Brand -->
+            <div class="d-flex justify-content-between align-items-center w-100">
+                <a class="navbar-brand text-wrap" href="<?php echo $path_prefix; ?>index.php"
+                    style="max-width: 80%;">System zgłaszania usterek w Zespół Szkół nr 3 im. Władysława Stanisława
+                    Reymonta</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+            </div>
+
+            <!-- Row 2: Menu (Right Aligned) -->
+            <div class="collapse navbar-collapse w-100 justify-content-end mt-2" id="navbarNav">
                 <?php if (isset($_SESSION['user_id'])): ?>
-                    <ul class="navbar-nav me-auto">
+                    <ul class="navbar-nav">
                         <li class="nav-item">
                             <a class="nav-link" href="<?php echo $path_prefix; ?>index.php">Zgłoś Usterkę</a>
                         </li>
@@ -52,9 +58,12 @@ if (session_status() === PHP_SESSION_NONE) {
                             <li class="nav-item">
                                 <a class="nav-link" href="<?php echo $path_prefix; ?>admin/reports.php">Raporty</a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="<?php echo $path_prefix; ?>admin/settings.php">Ustawienia</a>
+                            </li>
                         <?php endif; ?>
                     </ul>
-                    <div class="d-flex">
+                    <div class="d-flex ms-lg-3 align-items-center mt-2 mt-lg-0">
                         <span class="navbar-text me-3 text-muted fw-bold">
                             Witaj, <?php echo htmlspecialchars($_SESSION['user_name']); ?>
                         </span>

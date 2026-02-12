@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../../config/db.php';
 
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
 // Obsługa eksportu do CSV (musi być przed jakimkolwiek outputem HTML)
 if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
@@ -18,12 +22,28 @@ if (isset($_GET['export']) && $_GET['export'] === 'csv') {
     // Nagłówki kolumn
     fputcsv($output, ['ID', 'Zgłaszający', 'Sala', 'Typ Usterki', 'Opis', 'Status', 'Data Utworzenia']);
 
-    // Pobranie danych
+    // Pobranie danych z filtrowaniem
+    $date_from = $_GET['date_from'] ?? '';
+    $date_to = $_GET['date_to'] ?? '';
+    $where_sql = "1=1";
+    $params = [];
+
+    if ($date_from) {
+        $where_sql .= " AND t.created_at >= :date_from";
+        $params[':date_from'] = $date_from . ' 00:00:00';
+    }
+    if ($date_to) {
+        $where_sql .= " AND t.created_at <= :date_to";
+        $params[':date_to'] = $date_to . ' 23:59:59';
+    }
+
     $query = "SELECT t.id, COALESCE(NULLIF(t.reporter_name, ''), u.name) as reporter, t.room_number, t.issue_type, t.description, t.status, t.created_at 
               FROM tickets t 
               JOIN users u ON t.user_id = u.id 
+              WHERE $where_sql
               ORDER BY t.created_at DESC";
-    $stmt = $pdo->query($query);
+    $stmt = $pdo->prepare($query);
+    $stmt->execute($params);
 
     while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
         fputcsv($output, $row);
@@ -40,34 +60,61 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
     exit;
 }
 
+// Parametry filtrowania (ponownie dla widoku HTML)
+$date_from = $_GET['date_from'] ?? '';
+$date_to = $_GET['date_to'] ?? '';
+
+$where_sql = "1=1";
+$params = [];
+
+if ($date_from) {
+    $where_sql .= " AND created_at >= :date_from";
+    $params[':date_from'] = $date_from . ' 00:00:00';
+}
+if ($date_to) {
+    $where_sql .= " AND created_at <= :date_to";
+    $params[':date_to'] = $date_to . ' 23:59:59';
+}
+
 // 1. Podstawowe liczniki
 $stats = [
     'total' => 0,
     'new' => 0,
     'in_progress' => 0,
     'resolved' => 0,
-    'this_month' => 0
 ];
 
 // Pobieranie statystyk ogólnych
 try {
-    $stats['total'] = $pdo->query("SELECT COUNT(*) FROM tickets")->fetchColumn();
-    $stats['new'] = $pdo->query("SELECT COUNT(*) FROM tickets WHERE status = 'nowe'")->fetchColumn();
-    $stats['in_progress'] = $pdo->query("SELECT COUNT(*) FROM tickets WHERE status = 'w_trakcie'")->fetchColumn();
-    $stats['resolved'] = $pdo->query("SELECT COUNT(*) FROM tickets WHERE status IN ('rozwiazane', 'naprawione')")->fetchColumn();
-    $stats['this_month'] = $pdo->query("SELECT COUNT(*) FROM tickets WHERE MONTH(created_at) = MONTH(CURRENT_DATE()) AND YEAR(created_at) = YEAR(CURRENT_DATE())")->fetchColumn();
+    // Helper function for prepared statements
+    function getCount($pdo, $sql, $params)
+    {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchColumn();
+    }
+
+    $stats['total'] = getCount($pdo, "SELECT COUNT(*) FROM tickets WHERE $where_sql", $params);
+    $stats['new'] = getCount($pdo, "SELECT COUNT(*) FROM tickets WHERE status = 'nowe' AND $where_sql", $params);
+    $stats['in_progress'] = getCount($pdo, "SELECT COUNT(*) FROM tickets WHERE status = 'w_trakcie' AND $where_sql", $params);
+    $stats['resolved'] = getCount($pdo, "SELECT COUNT(*) FROM tickets WHERE status IN ('rozwiazane', 'naprawione') AND $where_sql", $params);
+
+
 
     // Dane do wykresów
     // Statusy
-    $stmt = $pdo->query("SELECT status, COUNT(*) as count FROM tickets GROUP BY status");
-    $statusData = $stmt->fetchAll(PDO::FETCH_KEY_PAIR); // ['nowe' => 5, 'w_trakcie' => 2]
+    $stmt = $pdo->prepare("SELECT status, COUNT(*) as count FROM tickets WHERE $where_sql GROUP BY status");
+    $stmt->execute($params);
+    $statusData = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
 
     // Typy usterek (Top 5)
-    $stmt = $pdo->query("SELECT issue_type, COUNT(*) as count FROM tickets GROUP BY issue_type ORDER BY count DESC LIMIT 5");
+    $stmt = $pdo->prepare("SELECT issue_type, COUNT(*) as count FROM tickets WHERE $where_sql GROUP BY issue_type ORDER BY count DESC LIMIT 5");
+    $stmt->execute($params);
     $issueData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Sale (Top 5)
-    $stmt = $pdo->query("SELECT room_number, COUNT(*) as count FROM tickets GROUP BY room_number ORDER BY count DESC LIMIT 5");
+    $stmt = $pdo->prepare("SELECT room_number, COUNT(*) as count FROM tickets WHERE $where_sql GROUP BY room_number ORDER BY count DESC LIMIT 5");
+    $stmt->execute($params);
     $roomData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 } catch (PDOException $e) {
@@ -76,52 +123,71 @@ try {
 ?>
 
 <div class="row mb-4">
-    <div class="col-12 d-flex justify-content-between align-items-center">
+    <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-3">
         <h2 class="fw-bold m-0">Raporty i Statystyki</h2>
-        <a href="reports.php?export=csv" class="btn btn-success shadow-sm">
-            <span class="me-2">📥</span> Pobierz CSV
-        </a>
+
+        <form class="d-flex gap-2 align-items-center" method="GET" action="reports.php">
+            <div class="input-group">
+                <span class="input-group-text bg-white text-muted small">Od</span>
+                <input type="date" class="form-control" name="date_from"
+                    value="<?php echo htmlspecialchars($date_from); ?>">
+            </div>
+            <div class="input-group">
+                <span class="input-group-text bg-white text-muted small">Do</span>
+                <input type="date" class="form-control" name="date_to"
+                    value="<?php echo htmlspecialchars($date_to); ?>">
+            </div>
+            <button type="submit" class="btn btn-primary shadow-sm">Filtruj</button>
+            <?php if ($date_from || $date_to): ?>
+                <a href="reports.php" class="btn btn-outline-secondary" title="Wyczyść filtry">✕</a>
+            <?php endif; ?>
+            <a href="reports.php?export=csv<?php echo $date_from ? '&date_from=' . $date_from : ''; ?><?php echo $date_to ? '&date_to=' . $date_to : ''; ?>"
+                class="btn btn-success shadow-sm" title="Pobierz CSV">
+                CSV
+            </a>
+        </form>
     </div>
 </div>
 
 <!-- Kafelki Statystyk -->
-<div class="row mb-4 g-3">
-    <div class="col-md-3">
+<div class="row mb-4 g-3 row-cols-1 row-cols-md-2 row-cols-lg-4">
+    <div class="col">
         <div class="card border-0 shadow-sm h-100 bg-primary text-white">
             <div class="card-body">
-                <h6 class="text-uppercase opacity-75 small fw-bold">Wszystkie zgłoszenia</h6>
+                <h6 class="text-uppercase opacity-75 small fw-bold">Wszystkie</h6>
                 <h2 class="display-6 fw-bold mb-0"><?php echo $stats['total']; ?></h2>
-                <small class="opacity-75">W tym miesiącu: +<?php echo $stats['this_month']; ?></small>
+                <small class="opacity-75">Łącznie zgłoszeń</small>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="card border-0 shadow-sm h-100 bg-danger text-white">
             <div class="card-body">
-                <h6 class="text-uppercase opacity-75 small fw-bold">Nowe / Oczekujące</h6>
+                <h6 class="text-uppercase opacity-75 small fw-bold">Nowe</h6>
                 <h2 class="display-6 fw-bold mb-0"><?php echo $stats['new']; ?></h2>
                 <small class="opacity-75">Wymagają uwagi</small>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="card border-0 shadow-sm h-100 bg-warning text-dark">
             <div class="card-body">
-                <h6 class="text-uppercase opacity-75 small fw-bold">W trakcie naprawy</h6>
+                <h6 class="text-uppercase opacity-75 small fw-bold">W trakcie</h6>
                 <h2 class="display-6 fw-bold mb-0"><?php echo $stats['in_progress']; ?></h2>
                 <small class="opacity-75">Serwisowane</small>
             </div>
         </div>
     </div>
-    <div class="col-md-3">
+    <div class="col">
         <div class="card border-0 shadow-sm h-100 bg-success text-white">
             <div class="card-body">
                 <h6 class="text-uppercase opacity-75 small fw-bold">Rozwiązane</h6>
                 <h2 class="display-6 fw-bold mb-0"><?php echo $stats['resolved']; ?></h2>
-                <small class="opacity-75">Sukcesywnie zamykane</small>
+                <small class="opacity-75">Sukces</small>
             </div>
         </div>
     </div>
+
 </div>
 
 <div class="row mb-4">
@@ -130,7 +196,9 @@ try {
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body p-4">
                 <h5 class="card-title fw-bold mb-4 text-secondary">Najczęstsze typy usterek</h5>
-                <canvas id="issuesChart" height="150"></canvas>
+                <div style="height: 300px; position: relative; width: 100%;">
+                    <canvas id="issuesChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
