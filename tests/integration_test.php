@@ -3,7 +3,6 @@
 echo "=== TEST INTEGRACYJNY SYSTEMU ===\n";
 
 require_once __DIR__ . '/../config/db.php';
-require_once __DIR__ . '/../includes/Mailer.php';
 require_once __DIR__ . '/../includes/TelegramNotifier.php';
 
 // Dane testowe
@@ -27,49 +26,15 @@ try {
     $ticketId = $pdo->lastInsertId();
     echo "OK (ID: $ticketId)\n";
 
-    // 2. Wyślij Email
-    echo "[2/3] Wysyłanie powiadomienia Email... ";
-    $mail_subject = "Nowe zgłoszenie #$ticketId: Sala $room ($issue)";
-    $mail_body = "
-        <h3>Nowe zgłoszenie usterki (TEST)</h3>
-        <p><strong>Zgłaszający:</strong> " . htmlspecialchars($reporter) . "</p>
-        <p><strong>Sala:</strong> " . htmlspecialchars($room) . "</p>
-        <p><strong>Typ usterki:</strong> " . htmlspecialchars($issue) . "</p>
-        <p><strong>Opis:</strong> " . nl2br(htmlspecialchars($desc)) . "</p>
-        <p><small>To powiadomienie zostało wygenerowane w ramach testów wdrożeniowych.</small></p>
-    ";
-
-    // Logika Mailer::notifyAdmins wewnątrz testu dla pewności (z logowaniem wyniku)
-    // Bezpośrednie użycie Mailer::send, aby przechwycić wynik boolean, bo notifyAdmins jest void
-    $emailStmt = $pdo->query("SELECT email FROM users WHERE role = 'admin'");
-    $admins = $emailStmt->fetchAll(PDO::FETCH_COLUMN);
-    $emailSuccess = true;
-    foreach ($admins as $email) {
-        if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            if (!Mailer::send($email, "[Test] $mail_subject", $mail_body)) {
-                $emailSuccess = false;
-                echo "\n   -> Błąd wysyłania do $email";
-            }
-        }
-    }
-
-    if ($emailSuccess && count($admins) > 0) {
-        echo "OK (Do: " . count($admins) . " adminów)\n";
-    } elseif (count($admins) == 0) {
-        echo "POMINIĘTO (Brak adminów w bazie)\n";
-    } else {
-        echo "BŁĄD (Sprawdź logi)\n";
-    }
-
-    // 3. Wyślij Telegram
-    echo "[3/3] Wysyłanie powiadomienia Telegram... ";
-    $telegram_message = "🆕 <b>Nowe zgłoszenie usterki (TEST)</b>\n\n" .
-        "🕒 <b>Data:</b> " . date('Y-m-d H:i') . "\n" .
-        "👤 <b>Zgłaszający:</b> " . htmlspecialchars($reporter) . "\n" .
-        "📍 <b>Sala:</b> " . htmlspecialchars($room) . "\n" .
-        "⚠️ <b>Usterka:</b> " . htmlspecialchars($issue) . "\n" .
-        "📝 <b>Opis:</b> " . htmlspecialchars($desc) . "\n" .
-        "🆔 <b>ID Zgłoszenia:</b> #$ticketId";
+    // 2. Wyślij Telegram
+    echo "[2/2] Wysyłanie powiadomienia Telegram... ";
+    $telegram_message = "🆕 Nowe zgłoszenie usterki (TEST)\n\n" .
+        "🕒 Data: " . date('Y-m-d H:i') . "\n" .
+        "👤 Zgłaszający: " . htmlspecialchars($reporter) . "\n" .
+        "📍 Sala: " . htmlspecialchars($room) . "\n" .
+        "⚠️ Usterka: " . htmlspecialchars($issue) . "\n" .
+        "📝 Opis: " . htmlspecialchars($desc) . "\n\n" .
+        "🔗 Przejdź do panelu";
 
     if (TelegramNotifier::send($telegram_message)) {
         echo "OK\n";

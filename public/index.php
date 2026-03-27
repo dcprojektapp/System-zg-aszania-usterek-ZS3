@@ -36,28 +36,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':desc' => $desc
             ]);
 
-            // Powiadomienie Email dla Adminów
-            require_once __DIR__ . '/../includes/Mailer.php';
-            $mail_subject = "Nowe zgłoszenie: Sala $room ($issue)";
-            $mail_body = "
-                <h3>Nowe zgłoszenie usterki</h3>
-                <p><strong>Zgłaszający:</strong> " . htmlspecialchars($reporter_name) . "</p>
-                <p><strong>Sala:</strong> " . htmlspecialchars($room) . "</p>
-                <p><strong>Typ usterki:</strong> " . htmlspecialchars($issue) . "</p>
-                <p><strong>Opis:</strong> " . nl2br(htmlspecialchars($desc)) . "</p>
-                <p><a href='http://{$_SERVER['HTTP_HOST']}" . dirname($_SERVER['PHP_SELF']) . "/admin/dashboard.php'>Przejdź do panelu administratora</a></p>
-            ";
-            Mailer::notifyAdmins($pdo, $mail_subject, $mail_body);
-
             // Powiadomienie Telegram
             require_once __DIR__ . '/../includes/TelegramNotifier.php';
-            $telegram_message = "🆕 <b>Nowe zgłoszenie usterki</b>\n\n" .
-                "🕒 <b>Data:</b> " . date('Y-m-d H:i') . "\n" .
-                "👤 <b>Zgłaszający:</b> " . htmlspecialchars($reporter_name) . "\n" .
-                "📍 <b>Sala:</b> " . htmlspecialchars($room) . "\n" .
-                "⚠️ <b>Usterka:</b> " . htmlspecialchars($issue) . "\n";
+            $telegram_message = "🆕 Nowe zgłoszenie usterki\n\n" .
+                "🕒 Data: " . date('Y-m-d H:i') . "\n" .
+                "👤 Zgłaszający: " . htmlspecialchars($reporter_name) . "\n" .
+                "📍 Sala: " . htmlspecialchars($room) . "\n" .
+                "⚠️ Usterka: " . htmlspecialchars($issue) . "\n";
             if (!empty($desc)) {
-                $telegram_message .= "📝 <b>Opis:</b> " . htmlspecialchars($desc) . "\n";
+                $telegram_message .= "📝 Opis: " . htmlspecialchars($desc) . "\n";
             }
 
             // Link do panelu (zakładając, że domena jest dostępna publicznie lub w sieci lokalnej)
