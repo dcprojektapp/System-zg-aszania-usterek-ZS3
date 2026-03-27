@@ -87,16 +87,15 @@ try {
 
 <div class="card mb-4 shadow-sm">
     <div class="card-body p-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
             <h5 class="card-title fw-bold m-0">Panel Administratora</h5>
-            <div class="btn-group shadow-sm">
+            <div class="btn-group shadow-sm flex-wrap">
                 <a href="dashboard.php"
                     class="btn btn-sm btn-outline-primary <?php echo !$filter_status ? 'active' : ''; ?>">Wszystkie</a>
                 <a href="dashboard.php?status=nowe"
                     class="btn btn-sm btn-outline-danger <?php echo $filter_status == 'nowe' ? 'active' : ''; ?>">Nowe</a>
                 <a href="dashboard.php?status=w_trakcie"
-                    class="btn btn-sm btn-outline-warning <?php echo $filter_status == 'w_trakcie' ? 'active' : ''; ?>">W
-                    trakcie</a>
+                    class="btn btn-sm btn-outline-warning <?php echo $filter_status == 'w_trakcie' ? 'active' : ''; ?>">W trakcie</a>
             </div>
         </div>
 
@@ -159,10 +158,10 @@ try {
                                         <?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?>
                                     </span>
                                 </td>
-                                <td class="small text-muted"><?php echo date('d.m H:i', strtotime($ticket['created_at'])); ?>
+                                <td class="small text-muted no-wrap-cell"><?php echo date('d.m H:i', strtotime($ticket['created_at'])); ?>
                                 </td>
-                                <td>
-                                    <div class="d-flex gap-2">
+                                <td class="no-wrap-cell">
+                                    <div class="d-flex flex-wrap gap-2">
                                         <form method="POST" class="d-flex" style="max-width: 140px;">
                                             <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
                                             <select name="status" class="form-select form-select-sm shadow-none border-1"

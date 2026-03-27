@@ -323,7 +323,7 @@ try {
                                         </td>
                                         <td><?php echo htmlspecialchars($ticket['room_number']); ?></td>
                                         <td><?php echo htmlspecialchars($ticket['issue_type']); ?></td>
-                                        <td>
+                                        <td class="no-wrap-cell">
                                             <?php
                                             $status = $ticket['status'];
                                             $badgeClass = 'bg-secondary';
@@ -351,7 +351,7 @@ try {
                                                 <?php echo $icon . ' ' . ucfirst(str_replace('_', ' ', $status)); ?>
                                             </span>
                                         </td>
-                                        <td class="text-muted small">
+                                        <td class="text-muted small no-wrap-cell">
                                             <?php echo date('d.m.Y', strtotime($ticket['created_at'])); ?>
                                             <div class="tiny-text"><?php echo date('H:i', strtotime($ticket['created_at'])); ?>
                                             </div>
