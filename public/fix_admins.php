@@ -2,8 +2,8 @@
 require_once __DIR__ . '/../config/db.php';
 
 $admins = [
-    ['name' => 'Dawid Chaber', 'email' => 'dchaber@zs3.lukow.pl', 'pass' => 'ZS3Lukow'],
-    ['name' => 'Wojciech Zielonka', 'email' => 'wzielonka@zs3.lukow.pl', 'pass' => 'ZS3Lukow']
+    ['name' => 'Jan Nowak', 'email' => 'jannowak@zs3.lukow.pl', 'pass' => 'ZS3Lukow']
+   
 ];
 
 echo "<h3>Aktualizacja kont administratorów</h3>";
