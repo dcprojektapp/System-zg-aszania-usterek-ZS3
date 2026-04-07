@@ -37,12 +37,12 @@ Nowoczesna aplikacja internetowa do zarządzania zgłoszeniami awarii w szkole. 
 System posiada domyślnie utworzone konta:
 
 ### Konto Nauczyciela (Zgłaszający)
-- **Email**: `nauczyciel@zs3.lukow.pl`
-- **Hasło**: `nauczycielZS3`
+- **Email**: `
+- **Hasło**: 
 
 ### Konto Administratora
-- **Email**: `admin@zs3.lukow.pl`
-- **Hasło**: `AdminZS3`
+- **Email**: 
+- **Hasło**: 
 
 ## 🛠 Technologie
 - **Frontend**: HTML5, CSS3 (Custom Glassmorphism), Bootstrap 5, JavaScript.
