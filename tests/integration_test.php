@@ -1,5 +1,5 @@
 <?php
-// Ten skrypt symuluje pełne dodanie zgłoszenia: INSERT do DB + Email + Telegram
+// Ten skrypt symuluje pełne dodanie zgłoszenia: INSERT do DB + Telegram
 echo "=== TEST INTEGRACYJNY SYSTEMU ===\n";
 
 require_once __DIR__ . '/../config/db.php';
